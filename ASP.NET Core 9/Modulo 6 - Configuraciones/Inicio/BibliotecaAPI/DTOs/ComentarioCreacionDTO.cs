@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BibliotecaAPI.DTOs
+namespace BibliotecaAPI.DTOs;
+
+public class ComentarioCreacionDTO
 {
-    public class ComentarioCreacionDTO
-    {
-        [Required]
-        public required string Cuerpo { get; set; }
-    }
+    [Required]
+    public required string Cuerpo { get; set; }
 }

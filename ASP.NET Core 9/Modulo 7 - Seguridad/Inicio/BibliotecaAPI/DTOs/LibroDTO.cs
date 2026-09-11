@@ -1,8 +1,7 @@
-﻿namespace BibliotecaAPI.DTOs
+﻿namespace BibliotecaAPI.DTOs;
+
+public class LibroDTO
 {
-    public class LibroDTO
-    {
-        public int Id { get; set; }
-        public required string Titulo { get; set; }
-    }
+    public int Id { get; set; }
+    public required string Titulo { get; set; }
 }

@@ -1,8 +1,7 @@
-﻿namespace BibliotecaAPI.DTOs
+﻿namespace BibliotecaAPI.DTOs;
+
+public class AutorDTO
 {
-    public class AutorDTO
-    {
-        public int Id { get; set; }
-        public required string NombreCompleto { get; set; }
-    }
+    public int Id { get; set; }
+    public required string NombreCompleto { get; set; }
 }

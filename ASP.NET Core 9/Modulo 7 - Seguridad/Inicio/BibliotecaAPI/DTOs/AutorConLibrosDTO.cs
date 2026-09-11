@@ -1,7 +1,6 @@
-﻿namespace BibliotecaAPI.DTOs
+﻿namespace BibliotecaAPI.DTOs;
+
+public class AutorConLibrosDTO : AutorDTO
 {
-    public class AutorConLibrosDTO: AutorDTO
-    {
-        public List<LibroDTO> Libros { get; set; } = [];
-    }
+    public List<LibroDTO> Libros { get; set; } = [];
 }

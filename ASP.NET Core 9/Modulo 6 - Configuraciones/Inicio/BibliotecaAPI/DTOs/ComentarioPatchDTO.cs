@@ -1,6 +1,5 @@
-﻿namespace BibliotecaAPI.DTOs
+﻿namespace BibliotecaAPI.DTOs;
+
+public class ComentarioPatchDTO : ComentarioCreacionDTO
 {
-    public class ComentarioPatchDTO: ComentarioCreacionDTO
-    {
-    }
 }
