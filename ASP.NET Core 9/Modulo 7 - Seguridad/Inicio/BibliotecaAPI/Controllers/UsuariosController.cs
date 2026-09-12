@@ -1,4 +1,5 @@
 ﻿using BibliotecaAPI.DTOs;
+using BibliotecaAPI.Entidades;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,11 +17,12 @@ namespace BibliotecaAPI.Controllers;
 [AllowAnonymous]
 public class UsuariosController : ControllerBase
 {
-    private readonly UserManager<IdentityUser> userManager;
+    private readonly UserManager<Usuario> userManager;
     private readonly IConfiguration configuration;
-    private readonly SignInManager<IdentityUser> signInManager;
+    private readonly SignInManager<Usuario> signInManager;
+    private readonly Task<Usuario> serviciosUsuarios;
 
-    public UsuariosController(UserManager<IdentityUser> userManager, IConfiguration configuration, SignInManager<IdentityUser> signInManager)
+    public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration, SignInManager<Usuario> signInManager)
     {
         this.userManager = userManager;
         this.configuration = configuration;
@@ -29,7 +31,7 @@ public class UsuariosController : ControllerBase
     [HttpPost("registro")]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var usuario = new IdentityUser { UserName = credencialesUsuarioDTO.Email, Email = credencialesUsuarioDTO.Email };
+        var usuario = new Usuario { UserName = credencialesUsuarioDTO.Email, Email = credencialesUsuarioDTO.Email };
         var resultado = await userManager.CreateAsync(usuario, credencialesUsuarioDTO.Password!);
         if (resultado.Succeeded)
         {
@@ -63,6 +65,41 @@ public class UsuariosController : ControllerBase
         else
         {
             return RetornarLoginIncorrecto();
+        }
+    }
+    [HttpPut]
+    public async Task<ActionResult> Put(ActualizarUsuarioDTO actualizarUsuarioDTO)
+    {
+        var usuario = await Task.FromResult(new Usuario());
+        if (usuario is null)
+        {
+            return NotFound();
+        }
+
+        usuario.Rut = actualizarUsuarioDTO.Rut;
+        usuario.Nombres = actualizarUsuarioDTO.Nombres;
+        usuario.PrimerApellido = actualizarUsuarioDTO.PrimerApellido;
+        usuario.SegundoApellido = actualizarUsuarioDTO.SegundoApellido;
+        usuario.Cargo = actualizarUsuarioDTO.Cargo;
+        usuario.AsientoAsignado = actualizarUsuarioDTO.AsientoAsignado;
+        usuario.EsEjecutivo = actualizarUsuarioDTO.EsEjecutivo;
+        usuario.TipoUsuario = actualizarUsuarioDTO.TipoUsuario;
+        usuario.PrimerLogeo = actualizarUsuarioDTO.PrimerLogeo;
+        usuario.Estado = actualizarUsuarioDTO.Estado;
+
+        var resultado = await userManager.UpdateAsync(usuario);
+        if (resultado.Succeeded)
+        {
+            return NoContent();
+        }
+        else
+        {
+            foreach (var error in resultado.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return ValidationProblem();
         }
     }
     private ActionResult RetornarLoginIncorrecto()
