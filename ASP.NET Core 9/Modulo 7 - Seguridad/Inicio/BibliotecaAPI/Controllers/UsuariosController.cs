@@ -1,5 +1,6 @@
 ﻿using BibliotecaAPI.DTOs;
 using BibliotecaAPI.Entidades;
+using BibliotecaAPI.Servicios;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -20,13 +21,14 @@ public class UsuariosController : ControllerBase
     private readonly UserManager<Usuario> userManager;
     private readonly IConfiguration configuration;
     private readonly SignInManager<Usuario> signInManager;
-    private readonly Task<Usuario> serviciosUsuarios;
+    private readonly IServiciosUsuarios serviciosUsuarios;
 
-    public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration, SignInManager<Usuario> signInManager)
+    public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration, SignInManager<Usuario> signInManager, IServiciosUsuarios serviciosUsuarios)
     {
         this.userManager = userManager;
         this.configuration = configuration;
         this.signInManager = signInManager;
+        this.serviciosUsuarios = serviciosUsuarios;
     }
     [HttpPost("registro")]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
@@ -102,6 +104,22 @@ public class UsuariosController : ControllerBase
             return ValidationProblem();
         }
     }
+
+    [HttpGet("renovar-token")]
+    public async Task<ActionResult<RespuestaAutenticacionDTO>> RenovarToken()
+    {
+        var usuario = await serviciosUsuarios.ObtenerUsuario();
+        if (usuario is null)
+        {
+            return NotFound();
+        }
+        var credencialesUsuarioDTO = new CredencialesUsuarioDTO()
+        {
+            Email = usuario.Email!
+        };
+        return await ConstruirToken(credencialesUsuarioDTO);    
+    }
+
     private ActionResult RetornarLoginIncorrecto()
     {
         ModelState.AddModelError(string.Empty, "Login incorrecto");
