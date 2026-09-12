@@ -1,7 +1,6 @@
 ﻿using BibliotecaAPI.DTOs;
 
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -19,11 +18,13 @@ public class UsuariosController : ControllerBase
 {
     private readonly UserManager<IdentityUser> userManager;
     private readonly IConfiguration configuration;
+    private readonly SignInManager<IdentityUser> signInManager;
 
-    public UsuariosController(UserManager<IdentityUser> userManager,IConfiguration configuration)
+    public UsuariosController(UserManager<IdentityUser> userManager,IConfiguration configuration,SignInManager<IdentityUser> signInManager)
     {
         this.userManager = userManager;
         this.configuration = configuration;
+        this.signInManager = signInManager;
     }
     [HttpPost("registro")]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
@@ -44,6 +45,30 @@ public class UsuariosController : ControllerBase
 
             return ValidationProblem();
         }
+    }
+    [HttpPost("login")]
+    public async Task<ActionResult<RespuestaAutenticacionDTO>> Login(CredencialesUsuarioDTO credencialesUsuarioDTO)
+    {
+        var usuario = await userManager.FindByEmailAsync(credencialesUsuarioDTO.Email);
+        if (usuario is null)
+        {
+            return RetornarLoginIncorrecto();
+        }
+
+        var resultado = await signInManager.CheckPasswordSignInAsync(usuario, credencialesUsuarioDTO.Password!, false);
+        if (resultado.Succeeded)
+        {
+            return await ConstruirToken(credencialesUsuarioDTO);
+        }
+        else
+        {
+            return RetornarLoginIncorrecto();
+        } 
+    }
+    private ActionResult RetornarLoginIncorrecto()
+    {
+        ModelState.AddModelError(string.Empty, "Login incorrecto");
+        return ValidationProblem();
     }
     private async Task<RespuestaAutenticacionDTO> ConstruirToken(CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
