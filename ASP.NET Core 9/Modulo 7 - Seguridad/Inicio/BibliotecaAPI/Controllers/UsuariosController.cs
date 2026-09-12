@@ -15,7 +15,6 @@ namespace BibliotecaAPI.Controllers;
 
 [Route("api/usuarios")]
 [ApiController]
-[AllowAnonymous]
 public class UsuariosController : ControllerBase
 {
     private readonly UserManager<Usuario> userManager;
@@ -106,6 +105,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpGet("renovar-token")]
+    [Authorize]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> RenovarToken()
     {
         var usuario = await serviciosUsuarios.ObtenerUsuario();
@@ -118,6 +118,57 @@ public class UsuariosController : ControllerBase
             Email = usuario.Email!
         };
         return await ConstruirToken(credencialesUsuarioDTO);    
+    }
+
+    [HttpPost("hacer-admin")]
+    [Authorize(Policy = "esadmin")]
+    public async Task<ActionResult> HacerAdmin(EditarClaimDTO editarClaimDTO)
+    {
+        var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+        if (usuario is null)
+        {
+            return NotFound();
+        }
+
+        var resultado = await userManager.AddClaimAsync(usuario, new Claim("esadmin", "true"));
+        if (resultado.Succeeded)
+        {
+            return NoContent();
+        }
+        else
+        {
+            foreach (var error in resultado.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return ValidationProblem();
+        }
+    }
+    [HttpPost("remove-esadmin")]
+    [Authorize(Policy = "esadmin")]
+    public async Task<ActionResult> RemoverAdmin(EditarClaimDTO editarClaimDTO)
+    {
+        var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+        if (usuario is null)
+        {
+            return NotFound();
+        }
+
+        var resultado = await userManager.RemoveClaimAsync(usuario, new Claim("esadmin", "true"));
+        if (resultado.Succeeded)
+        {
+            return NoContent();
+        }
+        else
+        {
+            foreach (var error in resultado.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return ValidationProblem();
+        }
     }
 
     private ActionResult RetornarLoginIncorrecto()
