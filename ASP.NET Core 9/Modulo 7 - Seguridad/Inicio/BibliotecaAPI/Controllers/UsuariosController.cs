@@ -20,7 +20,7 @@ public class UsuariosController : ControllerBase
     private readonly IConfiguration configuration;
     private readonly SignInManager<IdentityUser> signInManager;
 
-    public UsuariosController(UserManager<IdentityUser> userManager,IConfiguration configuration,SignInManager<IdentityUser> signInManager)
+    public UsuariosController(UserManager<IdentityUser> userManager, IConfiguration configuration, SignInManager<IdentityUser> signInManager)
     {
         this.userManager = userManager;
         this.configuration = configuration;
@@ -63,7 +63,7 @@ public class UsuariosController : ControllerBase
         else
         {
             return RetornarLoginIncorrecto();
-        } 
+        }
     }
     private ActionResult RetornarLoginIncorrecto()
     {
@@ -87,7 +87,7 @@ public class UsuariosController : ControllerBase
         var creds = new SigningCredentials(llave, SecurityAlgorithms.HmacSha256);
         var expiracion = DateTime.UtcNow.AddYears(1);
         var securityToken = new JwtSecurityToken(issuer: null, audience: null, claims: claims, expires: expiracion, signingCredentials: creds);
-        
+
         var token = new JwtSecurityTokenHandler().WriteToken(securityToken);
 
         return new RespuestaAutenticacionDTO()

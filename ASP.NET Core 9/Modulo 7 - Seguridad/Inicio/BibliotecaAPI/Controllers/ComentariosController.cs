@@ -36,6 +36,7 @@ public class ComentariosController : ControllerBase
         }
 
         var comentarios = await context.Comentarios
+            .Include(x => x.Usuario)
             .Where(x => x.LibroId == libroId)
             .OrderByDescending(x => x.FechaPublicacion)
             .ToListAsync();
@@ -46,7 +47,8 @@ public class ComentariosController : ControllerBase
     [HttpGet("{id}", Name = "ObtenerComentario")]
     public async Task<ActionResult<ComentarioDTO>> Get(Guid id)
     {
-        var comentario = await context.Comentarios.FirstOrDefaultAsync(x => x.Id == id);
+        var comentario = await context.Comentarios.Include(x => x.Usuario)
+                                                  .FirstOrDefaultAsync(x => x.Id == id);
 
         if (comentario is null)
         {
