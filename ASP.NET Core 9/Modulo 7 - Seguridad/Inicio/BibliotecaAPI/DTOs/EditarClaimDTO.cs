@@ -4,7 +4,6 @@ namespace BibliotecaAPI.DTOs;
 
 public class EditarClaimDTO
 {
-    [EmailAddress]
     [Required]
-    public required string Email { get; set; } 
+    public required string Rut { get; set; } 
 }

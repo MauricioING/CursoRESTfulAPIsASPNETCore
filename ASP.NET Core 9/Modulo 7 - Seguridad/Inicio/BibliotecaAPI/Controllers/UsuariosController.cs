@@ -4,6 +4,7 @@ using BibliotecaAPI.Datos;
 using BibliotecaAPI.DTOs;
 using BibliotecaAPI.Entidades;
 using BibliotecaAPI.Servicios;
+using BibliotecaAPI.Utilidades;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -49,7 +50,7 @@ public class UsuariosController : ControllerBase
         }
         var credencialesUsuarioDTO = new CredencialesUsuarioDTO()
         {
-            Email = usuario.Email!
+            Rut = usuario.Rut!
         };
         return await ConstruirToken(credencialesUsuarioDTO);
     }
@@ -64,7 +65,7 @@ public class UsuariosController : ControllerBase
     [HttpPost("registro")]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var usuario = new Usuario { UserName = credencialesUsuarioDTO.Email, Email = credencialesUsuarioDTO.Email };
+        var usuario = new Usuario { UserName = RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut)};
         var resultado = await userManager.CreateAsync(usuario, credencialesUsuarioDTO.Password!);
         if (resultado.Succeeded)
         {
@@ -84,7 +85,7 @@ public class UsuariosController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<RespuestaAutenticacionDTO>> Login(CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var usuario = await userManager.FindByEmailAsync(credencialesUsuarioDTO.Email);
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut));
         if (usuario is null)
         {
             return RetornarLoginIncorrecto();
@@ -103,16 +104,16 @@ public class UsuariosController : ControllerBase
     [HttpPut]
     public async Task<ActionResult> Put(ActualizarUsuarioDTO actualizarUsuarioDTO)
     {
-        var usuario = await Task.FromResult(new Usuario());
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(actualizarUsuarioDTO.Rut!));
         if (usuario is null)
         {
             return NotFound();
         }
 
-        usuario.Rut = actualizarUsuarioDTO.Rut;
+        usuario.Rut = RutHelper.NormalizeRut(actualizarUsuarioDTO.Rut);
         usuario.Nombres = actualizarUsuarioDTO.Nombres;
-        usuario.PrimerApellido = actualizarUsuarioDTO.PrimerApellido;
-        usuario.SegundoApellido = actualizarUsuarioDTO.SegundoApellido;
+        usuario.Apelldos = actualizarUsuarioDTO.Apellidos;
+        usuario.NombreCompleto = $"{actualizarUsuarioDTO.Nombres} {actualizarUsuarioDTO.Apellidos}";
         usuario.Cargo = actualizarUsuarioDTO.Cargo;
         usuario.AsientoAsignado = actualizarUsuarioDTO.AsientoAsignado;
         usuario.EsEjecutivo = actualizarUsuarioDTO.EsEjecutivo;
@@ -136,10 +137,10 @@ public class UsuariosController : ControllerBase
         }
     }
     [HttpPost("hacer-admin")]
-    [Authorize(Policy = "esadmin")]
+    //[Authorize(Policy = "esadmin")]
     public async Task<ActionResult> HacerAdmin(EditarClaimDTO editarClaimDTO)
     {
-        var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(editarClaimDTO.Rut));
         if (usuario is null)
         {
             return NotFound();
@@ -164,7 +165,7 @@ public class UsuariosController : ControllerBase
     [Authorize(Policy = "esadmin")]
     public async Task<ActionResult> RemoverAdmin(EditarClaimDTO editarClaimDTO)
     {
-        var usuario = await userManager.FindByEmailAsync(editarClaimDTO.Email);
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(editarClaimDTO.Rut));
         if (usuario is null)
         {
             return NotFound();
@@ -194,11 +195,11 @@ public class UsuariosController : ControllerBase
     {
         var claims = new List<Claim>()
         {
-            new Claim("email", credencialesUsuarioDTO.Email),
+            new Claim("rut", RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut)),
             new Claim("lo que yo quiera", "cualquier valor")
         };
 
-        var usuario = await userManager.FindByEmailAsync(credencialesUsuarioDTO.Email);
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut));
         var claimsDB = await userManager.GetClaimsAsync(usuario!);
 
         claims.AddRange(claimsDB);

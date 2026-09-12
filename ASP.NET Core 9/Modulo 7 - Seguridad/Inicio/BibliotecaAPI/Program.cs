@@ -20,7 +20,10 @@ builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>
     opciones.UseSqlServer("name=DefaultConnection"));
 
-builder.Services.AddIdentityCore<Usuario>()
+builder.Services.AddIdentityCore<Usuario>(options =>
+{
+    options.User.RequireUniqueEmail = false;
+})
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
