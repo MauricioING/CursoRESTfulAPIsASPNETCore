@@ -18,8 +18,8 @@ using System.Text;
 
 namespace BibliotecaAPI.Controllers;
 
-[Route("api/usuarios")]
 [ApiController]
+[Route("api/usuarios")]
 public class UsuariosController : ControllerBase
 {
     private readonly UserManager<Usuario> userManager;
@@ -29,8 +29,9 @@ public class UsuariosController : ControllerBase
     private readonly ApplicationDbContext context;
     private readonly IMapper mapper;
 
-    public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration, SignInManager<Usuario> signInManager,
-        IServiciosUsuarios serviciosUsuarios, ApplicationDbContext context, IMapper mapper)
+    public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration,
+        SignInManager<Usuario> signInManager, IServiciosUsuarios serviciosUsuarios,
+        ApplicationDbContext context, IMapper mapper)
     {
         this.userManager = userManager;
         this.configuration = configuration;
@@ -39,38 +40,33 @@ public class UsuariosController : ControllerBase
         this.context = context;
         this.mapper = mapper;
     }
-    [HttpGet("renovar-token")]
-    [Authorize]
-    public async Task<ActionResult<RespuestaAutenticacionDTO>> RenovarToken()
-    {
-        var usuario = await serviciosUsuarios.ObtenerUsuario();
-        if (usuario is null)
-        {
-            return NotFound();
-        }
-        var credencialesUsuarioDTO = new CredencialesUsuarioDTO()
-        {
-            Rut = usuario.Rut!
-        };
-        return await ConstruirToken(credencialesUsuarioDTO);
-    }
+
     [HttpGet]
     [Authorize(Policy = "esadmin")]
     public async Task<IEnumerable<UsuarioDTO>> Get()
     {
         var usuarios = await context.Users.ToListAsync();
-        var usuarioDTO = mapper.Map<IEnumerable<UsuarioDTO>>(usuarios);
-        return usuarioDTO;  
+        var usuariosDTO = mapper.Map<IEnumerable<UsuarioDTO>>(usuarios);
+        return usuariosDTO;
     }
+
     [HttpPost("registro")]
-    public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(CredencialesUsuarioDTO credencialesUsuarioDTO)
+    public async Task<ActionResult<RespuestaAutenticacionDTO>> Registrar(
+        CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var usuario = new Usuario { UserName = RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut)};
+        var rutNormalizado = RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut);
+        var usuario = new Usuario
+        {
+            UserName = rutNormalizado,
+            Rut = rutNormalizado
+        };
+
         var resultado = await userManager.CreateAsync(usuario, credencialesUsuarioDTO.Password!);
+
         if (resultado.Succeeded)
         {
-            var respuestaToken = await ConstruirToken(credencialesUsuarioDTO);
-            return Ok(respuestaToken);
+            var respuestaAutenticacion = await ConstruirToken(credencialesUsuarioDTO);
+            return respuestaAutenticacion;
         }
         else
         {
@@ -82,16 +78,22 @@ public class UsuariosController : ControllerBase
             return ValidationProblem();
         }
     }
+
     [HttpPost("login")]
-    public async Task<ActionResult<RespuestaAutenticacionDTO>> Login(CredencialesUsuarioDTO credencialesUsuarioDTO)
+    public async Task<ActionResult<RespuestaAutenticacionDTO>> Login(
+        CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut));
+        var rutNormalizado = RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut);
+        var usuario = await userManager.FindByNameAsync(rutNormalizado);
+
         if (usuario is null)
         {
             return RetornarLoginIncorrecto();
         }
 
-        var resultado = await signInManager.CheckPasswordSignInAsync(usuario, credencialesUsuarioDTO.Password!, false);
+        var resultado = await signInManager.CheckPasswordSignInAsync(usuario,
+            credencialesUsuarioDTO.Password!, lockoutOnFailure: false);
+
         if (resultado.Succeeded)
         {
             return await ConstruirToken(credencialesUsuarioDTO);
@@ -101,18 +103,21 @@ public class UsuariosController : ControllerBase
             return RetornarLoginIncorrecto();
         }
     }
-    [HttpPut]
+
+    [HttpPut("actualizar-usuario")]
+    [Authorize]
     public async Task<ActionResult> Put(ActualizarUsuarioDTO actualizarUsuarioDTO)
     {
-        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(actualizarUsuarioDTO.Rut!));
+        var usuario = await serviciosUsuarios.ObtenerUsuario();
+
         if (usuario is null)
         {
             return NotFound();
         }
 
-        usuario.Rut = RutHelper.NormalizeRut(actualizarUsuarioDTO.Rut);
+        usuario.Rut = actualizarUsuarioDTO.Rut;
         usuario.Nombres = actualizarUsuarioDTO.Nombres;
-        usuario.Apelldos = actualizarUsuarioDTO.Apellidos;
+        usuario.Apellidos = actualizarUsuarioDTO.Apellidos;
         usuario.NombreCompleto = $"{actualizarUsuarioDTO.Nombres} {actualizarUsuarioDTO.Apellidos}";
         usuario.Cargo = actualizarUsuarioDTO.Cargo;
         usuario.AsientoAsignado = actualizarUsuarioDTO.AsientoAsignado;
@@ -121,97 +126,89 @@ public class UsuariosController : ControllerBase
         usuario.PrimerLogeo = actualizarUsuarioDTO.PrimerLogeo;
         usuario.Estado = actualizarUsuarioDTO.Estado;
 
-        var resultado = await userManager.UpdateAsync(usuario);
-        if (resultado.Succeeded)
-        {
-            return NoContent();
-        }
-        else
-        {
-            foreach (var error in resultado.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            return ValidationProblem();
-        }
+        await userManager.UpdateAsync(usuario);
+        return NoContent();
     }
-    [HttpPost("hacer-admin")]
-    //[Authorize(Policy = "esadmin")]
-    public async Task<ActionResult> HacerAdmin(EditarClaimDTO editarClaimDTO)
+
+    [HttpGet("renovar-token")]
+    [Authorize]
+    public async Task<ActionResult<RespuestaAutenticacionDTO>> RenovarToken()
     {
-        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(editarClaimDTO.Rut));
+        var usuario = await serviciosUsuarios.ObtenerUsuario();
+
         if (usuario is null)
         {
             return NotFound();
         }
 
-        var resultado = await userManager.AddClaimAsync(usuario, new Claim("esadmin", "true"));
-        if (resultado.Succeeded)
-        {
-            return NoContent();
-        }
-        else
-        {
-            foreach (var error in resultado.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+        var credencialesUsuarioDTO = new CredencialesUsuarioDTO { Rut = usuario.Rut!, Password = string.Empty };
 
-            return ValidationProblem();
-        }
+        var respuestaAutenticacion = await ConstruirToken(credencialesUsuarioDTO);
+        return respuestaAutenticacion;
     }
-    [HttpPost("remove-esadmin")]
+
+    [HttpPost("hacer-admin")]
+    [Authorize(Policy = "esadmin")]
+    public async Task<ActionResult> HacerAdmin(EditarClaimDTO editarClaimDTO)
+    {
+        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(editarClaimDTO.Rut));
+
+        if (usuario is null)
+        {
+            return NotFound();
+        }
+
+        await userManager.AddClaimAsync(usuario, new Claim("esadmin", "true"));
+        return NoContent();
+    }
+
+    [HttpPost("remover-admin")]
     [Authorize(Policy = "esadmin")]
     public async Task<ActionResult> RemoverAdmin(EditarClaimDTO editarClaimDTO)
     {
         var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(editarClaimDTO.Rut));
+
         if (usuario is null)
         {
             return NotFound();
         }
 
-        var resultado = await userManager.RemoveClaimAsync(usuario, new Claim("esadmin", "true"));
-        if (resultado.Succeeded)
-        {
-            return NoContent();
-        }
-        else
-        {
-            foreach (var error in resultado.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            return ValidationProblem();
-        }
+        await userManager.RemoveClaimAsync(usuario, new Claim("esadmin", "true"));
+        return NoContent();
     }
+
     private ActionResult RetornarLoginIncorrecto()
     {
         ModelState.AddModelError(string.Empty, "Login incorrecto");
         return ValidationProblem();
     }
-    private async Task<RespuestaAutenticacionDTO> ConstruirToken(CredencialesUsuarioDTO credencialesUsuarioDTO)
+
+    private async Task<RespuestaAutenticacionDTO> ConstruirToken(
+        CredencialesUsuarioDTO credencialesUsuarioDTO)
     {
-        var claims = new List<Claim>()
+        var rutNormalizado = RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut);
+        var claims = new List<Claim>
         {
-            new Claim("rut", RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut)),
-            new Claim("lo que yo quiera", "cualquier valor")
+            new("rut", rutNormalizado),
+            new("lo que yo quiera", "cualquier valor")
         };
 
-        var usuario = await userManager.FindByNameAsync(RutHelper.NormalizeRut(credencialesUsuarioDTO.Rut));
+        var usuario = await userManager.FindByNameAsync(rutNormalizado);
         var claimsDB = await userManager.GetClaimsAsync(usuario!);
 
         claims.AddRange(claimsDB);
 
         var llave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
-        var creds = new SigningCredentials(llave, SecurityAlgorithms.HmacSha256);
+        var credenciales = new SigningCredentials(llave, SecurityAlgorithms.HmacSha256);
+
         var expiracion = DateTime.UtcNow.AddYears(1);
-        var securityToken = new JwtSecurityToken(issuer: null, audience: null, claims: claims, expires: expiracion, signingCredentials: creds);
 
-        var token = new JwtSecurityTokenHandler().WriteToken(securityToken);
+        var tokenDeSeguridad = new JwtSecurityToken(issuer: null, audience: null,
+            claims: claims, expires: expiracion, signingCredentials: credenciales);
 
-        return new RespuestaAutenticacionDTO()
+        var token = new JwtSecurityTokenHandler().WriteToken(tokenDeSeguridad);
+
+        return new RespuestaAutenticacionDTO
         {
             Token = token,
             Expiracion = expiracion

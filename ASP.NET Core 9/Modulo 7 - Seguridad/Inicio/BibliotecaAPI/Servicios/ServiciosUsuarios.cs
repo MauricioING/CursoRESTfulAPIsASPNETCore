@@ -17,13 +17,13 @@ public class ServiciosUsuarios : IServiciosUsuarios
 
     public async Task<Usuario?> ObtenerUsuario()
     {
-        var emailClaim = contextAccessor.HttpContext!.User.Claims.FirstOrDefault(x => x.Type == "email");
-        if (emailClaim is null)
+        var rutClaim = contextAccessor.HttpContext!.User.Claims.FirstOrDefault(x => x.Type == "rut");
+        if (rutClaim is null)
         {
             return null;
         }
-        var email = emailClaim.Value;
-        var usuario = await userManager.FindByEmailAsync(email);
+        var rut = rutClaim.Value;
+        var usuario = await userManager.FindByNameAsync(rut);
         return usuario;
     }
 }

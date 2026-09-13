@@ -44,7 +44,8 @@ public class AutoMapperProfiles : Profile
         CreateMap<Comentario, ComentarioDTO>()
             .ForMember(dto => dto.UsuarioEmail, config => config.MapFrom(ent => ent.Usuario!.Email));
         CreateMap<ComentarioPatchDTO, Comentario>().ReverseMap();
-        CreateMap<Usuario, UsuarioDTO>();
+        CreateMap<Usuario, UsuarioDTO>()
+            .ForMember(dto => dto.Rut, config => config.MapFrom(ent => ent.Rut));
     }
 
     private string MapearNombreYApellidoAutor(Autor autor) => $"{autor.Nombres} {autor.Apellidos}";

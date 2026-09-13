@@ -2,7 +2,7 @@
 
 public class ActualizarUsuarioDTO
 {
-    public string? Rut { get; set; }
+    public required string Rut { get; set; }
     public string? Nombres { get; set; }
     public string? Apellidos { get; set; }
     public string? Cargo { get; set; }

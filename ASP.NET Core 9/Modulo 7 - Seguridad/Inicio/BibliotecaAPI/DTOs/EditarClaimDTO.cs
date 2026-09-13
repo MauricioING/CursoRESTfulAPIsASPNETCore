@@ -5,5 +5,5 @@ namespace BibliotecaAPI.DTOs;
 public class EditarClaimDTO
 {
     [Required]
-    public required string Rut { get; set; } 
+    public required string Rut { get; set; }
 }
